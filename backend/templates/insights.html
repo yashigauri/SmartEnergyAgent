@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% set active_page = "insights" %}
+{% block title %}System Insights — SereneHome{% endblock %}
+
+{% block extra_styles %}
+.ambient-shadow { box-shadow: 0 12px 36px rgba(141, 77, 59, 0.04); }
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-y-auto px-container-padding pb-container-padding pt-stack-sm">
+
+    <!-- Page Header -->
+    <div class="mb-stack-lg">
+        <h1 class="font-h1 text-h1 text-on-surface">System Insights</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant mt-2">
+            Technical performance and environmental parameters of your sanctuary.
+        </p>
+    </div>
+
+    <!-- Bento Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+
+        <!-- Intelligence Core (span 8) -->
+        <div class="md:col-span-8 bg-surface-container-lowest rounded-xl p-[32px] ambient-shadow flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -right-20 -top-20 w-64 h-64 bg-secondary-container/30 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="flex justify-between items-start mb-8 relative z-10">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-symbols-outlined text-secondary icon-fill">psychology</span>
+                        <h2 class="font-h2 text-h2 text-on-surface">Intelligence Core</h2>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">The AI agent is continuously learning and optimising your home environment.</p>
+                </div>
+                <div id="ins-status-badge" class="bg-secondary-container text-on-secondary-container font-label-sm text-label-sm px-4 py-1.5 rounded-full flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                    Active
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-8 relative z-10">
+                <div>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Training Status</p>
+                    <p class="font-h2 text-h2 text-secondary flex items-center gap-2" id="ins-training-status">
+                        Loading… <span class="material-symbols-outlined text-lg">hourglass_empty</span>
+                    </p>
+                </div>
+                <div>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Policy Memory (Q-Table)</p>
+                    <p class="font-h2 text-h2 text-primary flex items-center gap-2">
+                        <span id="ins-qstates">—</span>
+                        <span class="font-body-md text-body-md text-on-surface-variant mt-1">states mapped</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sensor Freshness (span 4) -->
+        <div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-[32px] ambient-shadow flex flex-col justify-between">
+            <div>
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-tertiary">router</span>
+                    <h2 class="font-h2 text-h2 text-on-surface">Sensor Freshness</h2>
+                </div>
+                <p class="font-body-md text-body-md text-on-surface-variant mb-6">Real-time data integrity across all environmental nodes.</p>
+            </div>
+            <div>
+                <div class="flex justify-between items-end mb-2">
+                    <span class="font-label-md text-label-md text-on-surface-variant">Data Age</span>
+                    <span class="font-h2 text-h2 text-on-surface" id="ins-sensor-age">—</span>
+                </div>
+                <div class="w-full h-3 bg-surface-container rounded-full overflow-hidden">
+                    <div id="ins-freshness-bar" class="h-full bg-secondary rounded-full transition-all duration-700" style="width:100%"></div>
+                </div>
+                <p class="font-label-sm text-label-sm text-secondary mt-3" id="ins-source-label">Waiting for sensor…</p>
+            </div>
+        </div>
+
+        <!-- MDP State (span 12) -->
+        <div class="md:col-span-12 bg-surface-container-lowest rounded-xl p-[32px] ambient-shadow mt-stack-sm">
+            <div class="mb-8">
+                <h2 class="font-h2 text-h2 text-on-surface">Current State Environment (MDP)</h2>
+                <p class="font-body-md text-body-md text-on-surface-variant mt-1">The current variables influencing the agent's next action decision.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                <!-- Temperature -->
+                <div class="bg-surface-container-low rounded-xl p-6 flex flex-col">
+                    <div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed mb-4">
+                        <span class="material-symbols-outlined">device_thermostat</span>
+                    </div>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Temperature</p>
+                    <p class="font-h2 text-h2 text-on-surface" id="ins-temp-cat">—</p>
+                    <p class="font-body-md text-body-md text-primary mt-auto pt-2" id="ins-temp-c">—</p>
+                </div>
+
+                <!-- Time of Day -->
+                <div class="bg-surface-container-low rounded-xl p-6 flex flex-col">
+                    <div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed mb-4">
+                        <span class="material-symbols-outlined">schedule</span>
+                    </div>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Time of Day</p>
+                    <p class="font-h2 text-h2 text-on-surface" id="ins-time-of-day">—</p>
+                    <p class="font-body-md text-body-md text-tertiary mt-auto pt-2" id="ins-season">—</p>
+                </div>
+
+                <!-- Occupancy -->
+                <div class="bg-surface-container-low rounded-xl p-6 flex flex-col">
+                    <div class="w-12 h-12 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed mb-4">
+                        <span class="material-symbols-outlined">home_pin</span>
+                    </div>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Occupancy</p>
+                    <p class="font-h2 text-h2 text-on-surface" id="ins-occupancy">—</p>
+                    <p class="font-body-md text-body-md text-secondary mt-auto pt-2" id="ins-occupied-raw">—</p>
+                </div>
+
+                <!-- Price Tier -->
+                <div class="bg-surface-container-low rounded-xl p-6 flex flex-col">
+                    <div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center text-on-error-container mb-4">
+                        <span class="material-symbols-outlined">payments</span>
+                    </div>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Grid Price Tier</p>
+                    <p class="font-h2 text-h2 text-on-surface" id="ins-price-tier">—</p>
+                    <p class="font-body-md text-body-md text-error mt-auto pt-2" id="ins-current-action">—</p>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+async function refreshInsights() {
+    try {
+        const res = await fetch('/api/state');
+        const d = await res.json();
+
+        // Training status
+        const trainingEl = document.getElementById('ins-training-status');
+        if (d.training_done) {
+            trainingEl.innerHTML = 'Stable <span class="material-symbols-outlined text-lg">check_circle</span>';
+        } else {
+            trainingEl.innerHTML = 'Learning… <span class="material-symbols-outlined text-lg animate-spin">autorenew</span>';
+        }
+        document.getElementById('ins-qstates').textContent =
+            (d.q_states || 0).toLocaleString();
+
+        // Sensor freshness
+        const age = d.sensor_age_s;
+        const ageLabel = age != null ? age + 's ago' : 'Unknown';
+        document.getElementById('ins-sensor-age').textContent = ageLabel;
+        const freshPct = age != null ? Math.max(0, 100 - (age / 30) * 100) : 0;
+        document.getElementById('ins-freshness-bar').style.width = freshPct + '%';
+        document.getElementById('ins-freshness-bar').className =
+            `h-full rounded-full transition-all duration-700 ${freshPct > 60 ? 'bg-secondary' : freshPct > 30 ? 'bg-tertiary' : 'bg-error'}`;
+        document.getElementById('ins-source-label').textContent =
+            'Source: ' + (d.sensor.source || '—');
+
+        // MDP state
+        const s = d.state;
+        document.getElementById('ins-temp-cat').textContent  = s.temperature   || '—';
+        document.getElementById('ins-temp-c').textContent    = d.sensor.temp_c != null ? d.sensor.temp_c + '°C' : '—';
+        document.getElementById('ins-time-of-day').textContent = s.time_of_day || '—';
+        document.getElementById('ins-season').textContent    = s._season        || '—';
+        document.getElementById('ins-occupancy').textContent = s.occupancy      || '—';
+        document.getElementById('ins-occupied-raw').textContent =
+            d.sensor.occupied != null ? (d.sensor.occupied ? 'Yes' : 'No') : '—';
+        document.getElementById('ins-price-tier').textContent = s.electricity_price || '—';
+        document.getElementById('ins-current-action').textContent = d.decision.action || '—';
+
+    } catch(e) { console.error('Insights fetch error:', e); }
+}
+
+refreshInsights();
+setInterval(refreshInsights, 6000);
+</script>
+{% endblock %}

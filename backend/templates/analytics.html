@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% set active_page = "analytics" %}
+{% block title %}Analytics & Training — SereneHome{% endblock %}
+
+{% block extra_styles %}
+.serene-shadow-interactive:hover {
+    box-shadow: 0 24px 48px -12px rgba(141, 77, 59, 0.12);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+{% endblock %}
+
+{% block content %}
+<main class="flex-1 overflow-y-auto p-container-padding">
+
+    <!-- Page Header -->
+    <div class="mb-stack-lg">
+        <h1 class="font-h1 text-h1 text-on-background mb-unit">Analytics &amp; Training</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+            Monitor your home's AI intelligence as it learns to optimise your environment.
+        </p>
+    </div>
+
+    <!-- Bento Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+
+        <!-- Training Graph (Episodes vs Avg Reward) -->
+        <div class="lg:col-span-8 bg-surface-container-lowest rounded-xl p-[32px] serene-shadow flex flex-col">
+            <div class="flex justify-between items-start mb-stack-md">
+                <div>
+                    <h2 class="font-h2 text-h2 text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary icon-fill">trending_up</span>
+                        Learning Trajectory
+                    </h2>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant mt-1 uppercase tracking-wider">Episodes vs. Average Reward</p>
+                </div>
+                <div id="training-badge" class="bg-secondary-container text-on-secondary-container px-4 py-2 rounded-full font-label-sm text-label-sm flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                    Training Active
+                </div>
+            </div>
+
+            <!-- SVG training graph -->
+            <div class="flex-1 min-h-[280px] w-full relative mt-4">
+                <div class="absolute left-0 top-0 h-full flex flex-col justify-between font-label-sm text-label-sm text-outline pb-8">
+                    <span id="y-max">+100</span><span>+50</span><span>0</span><span id="y-min">-50</span>
+                </div>
+                <div class="absolute bottom-0 left-10 right-0 flex justify-between font-label-sm text-label-sm text-outline">
+                    <span>Ep 1</span><span>Ep 250</span><span>Ep 500</span><span>Ep 750</span><span>Ep 1000</span>
+                </div>
+                <div class="absolute top-2 bottom-8 left-10 right-2 border-l border-b border-surface-variant/50">
+                    <div class="w-full h-1/4 border-t border-surface-variant/30 border-dashed"></div>
+                    <div class="w-full h-1/4 border-t border-surface-variant/30 border-dashed"></div>
+                    <div class="w-full h-1/4 border-t border-surface-variant/30 border-dashed"></div>
+                    <div class="w-full h-1/4 border-t border-surface-variant/30 border-dashed"></div>
+                    <svg id="training-svg" class="absolute inset-0 w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="primaryGradient" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#f4a28c" stop-opacity="0.2"/>
+                                <stop offset="100%" stop-color="#f4a28c" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path id="training-fill" fill="url(#primaryGradient)" d=""/>
+                        <path id="training-line" fill="none" stroke="#8d4d3b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d=""/>
+                        <circle id="training-dot" cx="0" cy="0" r="6" fill="#ffffff" stroke="#8d4d3b" stroke-width="3"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Reward Bar Chart -->
+        <div class="lg:col-span-4 bg-surface-container-lowest rounded-xl p-[32px] serene-shadow flex flex-col">
+            <div class="mb-stack-md">
+                <h2 class="font-h2 text-h2 text-on-surface">Recent Rewards</h2>
+                <p class="font-label-sm text-label-sm text-on-surface-variant mt-1 uppercase tracking-wider">Rolling Window (30)</p>
+            </div>
+            <div class="flex-1 flex flex-col justify-end">
+                <div class="flex items-end justify-between h-[200px] gap-1 relative" id="reward-bars">
+                    <div class="absolute bottom-0 left-0 right-0 h-px bg-surface-variant"></div>
+                </div>
+                <div class="mt-6 pt-6 border-t border-surface-variant flex justify-between items-center">
+                    <div>
+                        <p class="font-label-sm text-label-sm text-on-surface-variant">Avg Current Window</p>
+                        <p class="font-display text-[32px] leading-tight font-bold text-primary mt-1" id="avg-reward">—</p>
+                    </div>
+                    <span class="material-symbols-outlined text-secondary-fixed-dim" style="font-size:32px">psychology</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="h-stack-lg"></div>
+</main>
+
+<script>
+function buildTrainingPath(data) {
+    if (!data || data.length === 0) return;
+    const rewards = data.map(d => d.avg_reward);
+    const episodes = data.map(d => d.episode);
+    const minR = Math.min(...rewards), maxR = Math.max(...rewards);
+    const minE = Math.min(...episodes), maxE = Math.max(...episodes);
+    const range = maxR - minR || 1;
+
+    const pts = data.map((d, i) => {
+        const x = ((d.episode - minE) / (maxE - minE || 1)) * 1000;
+        const y = 300 - ((d.avg_reward - minR) / range) * 280;
+        return [x, y];
+    });
+
+    if (pts.length < 2) return;
+    const line = pts.map((p, i) => (i === 0 ? `M ${p[0]},${p[1]}` : `L ${p[0]},${p[1]}`)).join(' ');
+    const fill = line + ` L ${pts[pts.length-1][0]},300 L ${pts[0][0]},300 Z`;
+
+    document.getElementById('training-line').setAttribute('d', line);
+    document.getElementById('training-fill').setAttribute('d', fill);
+    const last = pts[pts.length - 1];
+    document.getElementById('training-dot').setAttribute('cx', last[0]);
+    document.getElementById('training-dot').setAttribute('cy', last[1]);
+    document.getElementById('y-max').textContent = '+' + Math.round(maxR);
+    document.getElementById('y-min').textContent = Math.round(minR);
+}
+
+function buildRewardBars(history) {
+    const container = document.getElementById('reward-bars');
+    const rewards = history.map(h => h.reward).reverse();
+    if (!rewards.length) return;
+    const maxAbs = Math.max(...rewards.map(Math.abs), 1);
+    const avg = (rewards.reduce((a, b) => a + b, 0) / rewards.length).toFixed(2);
+    document.getElementById('avg-reward').textContent = (avg >= 0 ? '+' : '') + avg;
+
+    // Remove old bars but keep baseline
+    const baseline = container.querySelector('.absolute');
+    container.innerHTML = '';
+    if (baseline) container.appendChild(baseline);
+
+    rewards.forEach(r => {
+        const pct = Math.max(5, (Math.abs(r) / maxAbs) * 95);
+        const bar = document.createElement('div');
+        bar.className = `w-full rounded-t-full transition-all hover:opacity-80 ${r >= 0 ? 'bg-secondary-fixed hover:bg-primary-container' : 'bg-error-container'}`;
+        bar.style.height = pct + '%';
+        bar.title = r;
+        container.appendChild(bar);
+    });
+}
+
+async function refreshAnalytics() {
+    try {
+        const [trainRes, histRes, stateRes] = await Promise.all([
+            fetch('/api/training'),
+            fetch('/api/history?limit=30'),
+            fetch('/api/state')
+        ]);
+        const trainData = await trainRes.json();
+        const histData  = await histRes.json();
+        const stateData = await stateRes.json();
+
+        buildTrainingPath(trainData);
+        buildRewardBars(histData);
+
+        const badge = document.getElementById('training-badge');
+        if (stateData.training_done) {
+            badge.className = 'bg-surface-container text-on-surface-variant px-4 py-2 rounded-full font-label-sm text-label-sm flex items-center gap-2';
+            badge.innerHTML = '<span class="material-symbols-outlined text-secondary text-sm">check_circle</span> Complete';
+        }
+    } catch(e) { console.error('Analytics fetch error:', e); }
+}
+
+refreshAnalytics();
+setInterval(refreshAnalytics, 8000);
+</script>
+{% endblock %}

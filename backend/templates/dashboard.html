@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+{% block title %}Dashboard — SereneHome{% endblock %}
+
+{% block content %}
+<main class="flex-1 overflow-y-auto p-gutter md:p-container-padding">
+<div class="max-w-7xl mx-auto space-y-stack-lg pb-12">
+
+    <!-- Page Header -->
+    <div class="flex flex-col gap-unit">
+        <h1 class="font-h1 text-h1 text-on-background">Dashboard</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+            Live overview of your home environment. The AI is actively optimising energy and comfort.
+        </p>
+    </div>
+
+    <!-- Live Sensor Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
+        <div class="bg-surface-container-lowest rounded-3xl p-6 serene-shadow flex flex-col gap-2">
+            <div class="w-10 h-10 rounded-2xl bg-primary-fixed flex items-center justify-center text-on-primary-fixed">
+                <span class="material-symbols-outlined">device_thermostat</span>
+            </div>
+            <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Temperature</p>
+            <p class="font-display text-[40px] leading-none font-bold text-on-surface" id="db-temp">—</p>
+            <p class="font-body-md text-body-md text-on-surface-variant" id="db-temp-cat">—</p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-3xl p-6 serene-shadow flex flex-col gap-2">
+            <div class="w-10 h-10 rounded-2xl bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
+                <span class="material-symbols-outlined">water_drop</span>
+            </div>
+            <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Humidity</p>
+            <p class="font-display text-[40px] leading-none font-bold text-on-surface" id="db-humidity">—</p>
+            <p class="font-body-md text-body-md text-on-surface-variant" id="db-source">—</p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-3xl p-6 serene-shadow flex flex-col gap-2">
+            <div class="w-10 h-10 rounded-2xl bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed">
+                <span class="material-symbols-outlined">home_pin</span>
+            </div>
+            <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mt-2">Occupancy</p>
+            <p class="font-display text-[40px] leading-none font-bold text-on-surface" id="db-occupancy">—</p>
+            <p class="font-body-md text-body-md text-on-surface-variant" id="db-price">—</p>
+        </div>
+    </div>
+
+    <!-- AI Decision + Q-States -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+        <div class="bg-surface-container-lowest rounded-3xl p-8 serene-shadow">
+            <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-3">AI Decision</p>
+            <p class="font-h2 text-h2 text-on-surface mb-1" id="db-action">—</p>
+            <p class="font-body-md text-body-md text-on-surface-variant">
+                Reward: <span class="text-secondary font-semibold" id="db-reward">—</span> &nbsp;·&nbsp;
+                Q-value: <span class="text-primary font-semibold" id="db-qvalue">—</span>
+            </p>
+        </div>
+        <div class="bg-surface-container-lowest rounded-3xl p-8 serene-shadow">
+            <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-3">Training</p>
+            <p class="font-h2 text-h2 text-on-surface mb-1" id="db-qstates">—</p>
+            <p class="font-body-md text-body-md text-on-surface-variant" id="db-training-status">Loading…</p>
+        </div>
+    </div>
+
+    <!-- Recent History Table -->
+    <div class="bg-surface-container-lowest rounded-xl serene-shadow overflow-hidden">
+        <div class="px-gutter py-5 border-b border-surface-variant/30">
+            <h2 class="font-h2 text-h2 text-on-surface">Recent Readings</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-surface-container-lowest border-b border-surface-variant/30">
+                        <th class="px-gutter py-4 font-label-md text-label-md text-on-surface-variant">Timestamp</th>
+                        <th class="px-gutter py-4 font-label-md text-label-md text-on-surface-variant">Temp</th>
+                        <th class="px-gutter py-4 font-label-md text-label-md text-on-surface-variant">Humidity</th>
+                        <th class="px-gutter py-4 font-label-md text-label-md text-on-surface-variant">Occupancy</th>
+                        <th class="px-gutter py-4 font-label-md text-label-md text-on-surface-variant">Price</th>
+                        <th class="px-gutter py-4 font-label-md text-label-md text-on-surface-variant">Action</th>
+                        <th class="px-gutter py-4 font-label-md text-label-md text-on-surface-variant text-right">Reward</th>
+                    </tr>
+                </thead>
+                <tbody id="db-history-body" class="divide-y divide-surface-variant/20 text-body-md font-body-md">
+                    <tr><td colspan="7" class="px-gutter py-6 text-on-surface-variant text-center">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+</main>
+
+<script>
+async function refreshDashboard() {
+    try {
+        const [stateRes, histRes] = await Promise.all([
+            fetch('/api/state'),
+            fetch('/api/history?limit=10')
+        ]);
+        const d = await stateRes.json();
+        const hist = await histRes.json();
+
+        // Sensor cards
+        document.getElementById('db-temp').textContent =
+            d.sensor.temp_c != null ? d.sensor.temp_c + '°C' : '—';
+        document.getElementById('db-temp-cat').textContent =
+            d.state.temperature || '—';
+        document.getElementById('db-humidity').textContent =
+            d.sensor.humidity != null ? d.sensor.humidity + '%' : '—';
+        document.getElementById('db-source').textContent =
+            'Source: ' + (d.sensor.source || '—');
+        document.getElementById('db-occupancy').textContent =
+            d.sensor.occupied != null ? (d.sensor.occupied ? 'Occupied' : 'Empty') : '—';
+        document.getElementById('db-price').textContent =
+            'Price: ' + (d.state.electricity_price || '—');
+
+        // AI decision
+        document.getElementById('db-action').textContent = d.decision.action || '—';
+        document.getElementById('db-reward').textContent = d.decision.reward ?? '—';
+        document.getElementById('db-qvalue').textContent = d.decision.q_value ?? '—';
+
+        // Training
+        document.getElementById('db-qstates').textContent =
+            (d.q_states || 0).toLocaleString() + ' Q-states';
+        document.getElementById('db-training-status').textContent =
+            d.training_done ? '✓ Training complete' : '⟳ Training in progress…';
+
+        // History table
+        const tbody = document.getElementById('db-history-body');
+        if (hist.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="px-gutter py-6 text-on-surface-variant text-center">No data yet</td></tr>';
+        } else {
+            tbody.innerHTML = hist.map(r => `
+                <tr class="hover:bg-surface-container-low/30 transition-colors">
+                    <td class="px-gutter py-3 text-on-surface-variant whitespace-nowrap">${r.ts ? r.ts.slice(0,19).replace('T',' ') : '—'}</td>
+                    <td class="px-gutter py-3 text-on-surface">${r.temp_c != null ? r.temp_c + '°C' : '—'}</td>
+                    <td class="px-gutter py-3 text-on-surface">${r.humidity != null ? r.humidity + '%' : '—'}</td>
+                    <td class="px-gutter py-3"><span class="px-3 py-1 rounded-full text-xs font-semibold bg-surface-container-high text-on-surface-variant">${r.occupancy || '—'}</span></td>
+                    <td class="px-gutter py-3 text-on-surface-variant">${r.price || '—'}</td>
+                    <td class="px-gutter py-3 text-primary font-semibold">${r.action || '—'}</td>
+                    <td class="px-gutter py-3 text-right font-semibold ${r.reward >= 0 ? 'text-secondary' : 'text-error'}">${r.reward != null ? (r.reward >= 0 ? '+' : '') + r.reward : '—'}</td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) { console.error('Dashboard fetch error:', e); }
+}
+
+refreshDashboard();
+setInterval(refreshDashboard, 5000);
+</script>
+{% endblock %}
