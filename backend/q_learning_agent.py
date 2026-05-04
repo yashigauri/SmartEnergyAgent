@@ -176,3 +176,14 @@ def get_best_action(state):
         return actions[ai], 0.0
     ai = Q_table[key].index(max(Q_table[key]))
     return actions[ai], round(max(Q_table[key]), 3)
+
+# -------- REAL-TIME UPDATE FUNCTION (NEW) --------
+def update_q(prev_state, action_idx, reward, next_state):
+    prev_key = state_to_key(prev_state)
+    next_key = state_to_key(next_state)
+
+    current_q = get_q(prev_key, action_idx)
+    max_next_q = max(Q_table.get(next_key, [0.0] * len(actions)))
+
+    new_q = current_q + ALPHA * (reward + GAMMA * max_next_q - current_q)
+    set_q(prev_key, action_idx, new_q)

@@ -57,15 +57,12 @@ def rcwl_to_occupancy(occupied_bool):
     return "occupied" if occupied_bool else "empty"
 
 def get_seasonal_price(hour, month):
-    is_summer = 4 <= month <= 9
-    is_peak = (7 <= hour < 10) or (18 <= hour < 22)
-    is_shoulder = (10 <= hour < 18) or (22 <= hour < 23)
-    if is_summer:
-        if is_peak:     return "expensive"
-        if is_shoulder: return "moderate"
-        return "cheap"
+    # simpler + more realistic tariff
+    if 18 <= hour <= 22:
+        return "expensive"   # peak hours
+    elif 10 <= hour < 18:
+        return "moderate"
     else:
-        if is_peak:     return "moderate"
         return "cheap"
 
 def build_state_from_sensors(temp_c, humidity, occupied, now):
