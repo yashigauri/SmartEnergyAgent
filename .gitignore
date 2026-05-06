@@ -1,0 +1,7 @@
+echo .venv/ > .gitignore
+echo __pycache__/ >> .gitignore
+echo */__pycache__/ >> .gitignore
+echo *.pyc >> .gitignore
+echo .env >> .gitignore
+echo energy_log.db >> .gitignore
+echo backend/energy_log.db >> .gitignore
